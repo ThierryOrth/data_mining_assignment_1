@@ -1,9 +1,8 @@
 import numpy as np
-from data_loader import CREDIT_DATA
+from data_loader import ATTRIBUTES, CREDIT_DATA
 from tree_structures import Node, Tree
 import collections
 
-ATTRIBUTES = {0:"age", 1:"married", 2:"house", 3:"income", 4:"gender", 5:"class"}
 
 def impurity(y):
     total = len(y)
@@ -55,7 +54,6 @@ def extend_node(node, x, y, nmin, minleaf, nfeat):
     if not best_split or num_of_obs<nmin or impurity(y)==0: # CONDITIONS (1), (2), (4)
         node.is_leaf = True
         node.feature_value = majority_class
-        node.name="LEAF"
         return
 
     left = feature_values[feature_values <= best_split]
@@ -70,10 +68,8 @@ def extend_node(node, x, y, nmin, minleaf, nfeat):
     if len(left)<minleaf or len(right)<minleaf:
         node.is_leaf = True
         node.feature_value = majority_class
-        node.name="LEAF"
         return
 
-    node.name = ATTRIBUTES[feature_index]
     node.feature_value = feature_index
     node.split_threshold = best_split
 
