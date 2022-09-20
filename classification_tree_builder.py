@@ -14,10 +14,7 @@ def impurity(y):
 def bestsplit(x,y):
     lowest_imp = 1 
     x_sorted = np.sort(np.unique(x))
-    candidate_splits = (x_sorted[0:-1]+x_sorted[1:len(x)])/2 # WHAT TO DO IF THERE ARE NO CANDIDATE SPLITS?
-
-    #print(f"X : {x}, Y : {y}, SORTED X : {x_sorted}, CANDIDATE SPLITS : {candidate_splits}")
-
+    candidate_splits = (x_sorted[0:-1]+x_sorted[1:len(x)])/2 # MAKE LEAF NODE IF THERE ARE NO CANDIDATE SPLITS
     best_split = candidate_splits[0]
 
     for split in candidate_splits:
@@ -45,6 +42,11 @@ def tree_grow(x, y, nmin, minleaf, nfeat):
 
 def extend_node(node, x, y, nmin, minleaf, nfeat):
     _, num_of_obs = x.shape
+
+    # LEAF NODE IF IMPURITY EQUALS ZERO
+    #           IF THERE ARE NO CANDIDATE SPLITS (#TODO)
+    #           IF THE NUMBER OF OBSERVATIONS IS TOO LOW
+    #           IF THE RESULTING LEAF NODES HAVE TOO LITTLE OBSERVATIONS
         
     if nmin <= num_of_obs and 0<impurity(y):
         feature_index = np.random.choice(np.arange(0,num_of_obs,1))
