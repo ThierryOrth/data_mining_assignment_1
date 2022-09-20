@@ -73,12 +73,20 @@ def extend_node(node, x, y, nmin, minleaf, nfeat):
                 node.right_child.feature_value = 1 # TODO: ASSIGN MAJORITY CLASS 
 
     node.is_leaf = True
-    node.feature_value = 1
+    node.feature_value = 1 # TODO: ASSIGN MAJORITY CLASS
 
     
 
 def tree_pred(x, tr):
-    pass
+    current = tr.root # CONCEPT
+
+    while not current.is_leaf:
+        if x[current.feature_value] <= current.split_threshold:
+            current = current.left_child
+        else:
+            current = current.right_child
+    
+    return current.feature_value
 
 def tree_grow_b(x, y, nmin, minleaf, nfeat, m):
     trees = []
