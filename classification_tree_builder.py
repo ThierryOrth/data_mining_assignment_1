@@ -64,12 +64,6 @@ def extend_node(node, x, y, nmin, minleaf, nfeat):
     left_labels = y[feature_values <= best_split]
     right_labels = y[best_split < feature_values]
 
-    node.feature_value = feature_index
-    node.split_threshold = best_split
-
-    node.left_child = Node()
-    node.right_child = Node()
-
     print(f"\n left : {left} \n right : {right} \n left_labels : {left_labels} \
                  \n right_labels : {right_labels} \n feature_index : {feature_index} \n split : {best_split} \n")
 
@@ -80,6 +74,11 @@ def extend_node(node, x, y, nmin, minleaf, nfeat):
         return
 
     node.name = ATTRIBUTES[feature_index]
+    node.feature_value = feature_index
+    node.split_threshold = best_split
+
+    node.left_child = Node()
+    node.right_child = Node()
     extend_node(node.left_child, x[feature_values<=best_split], left_labels, nmin, minleaf, nfeat)
     extend_node(node.right_child, x[best_split<feature_values], right_labels, nmin, minleaf, nfeat)
         
