@@ -1,6 +1,6 @@
 class Node:
-    def __init__(self):
-        #self.node_index = node_index
+    def __init__(self, node_index):
+        self.node_index = node_index
         self.feature_value = None
         self.split_threshold = None
         self.left_child = None
@@ -16,10 +16,11 @@ class Tree:
         
     def node_repr(self, current):
         if current:
-            print(f"index of node : {None} \n\t feature : {current.feature_value} \
-                                \n\t\t threshold : {current.split_threshold} \
-                                \n\t\t\t leaf node? {current.is_leaf}")
-                                # \n\t\t child node indices : {current.left_child.node_index if current.left_child else None, current.right_child.node_index if current.right_child else None} \
+            print(f"index of node : {current.node_index} \n\t feature : {current.feature_value} \
+                                \n\t\t child node indices : {current.left_child.node_index if current.left_child else None, current.right_child.node_index if current.right_child else None} \
+                                \n\t\t\t threshold : {current.split_threshold} \
+                                \n\t\t\t\t leaf node? {current.is_leaf}")
+                                # 
                                 
             self.node_repr(current.left_child)
             self.node_repr(current.right_child)

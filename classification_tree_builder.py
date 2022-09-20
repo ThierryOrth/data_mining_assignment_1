@@ -3,7 +3,6 @@ from data_loader import CREDIT_DATA
 from tree_structures import Node, Tree
 import collections
 
-
 ATTRIBUTES = {0:"age", 1:"married", 2:"house", 3:"income", 4:"gender", 5:"class"}
 
 def impurity(y):
@@ -13,11 +12,13 @@ def impurity(y):
     return p_zeros*p_ones
 
 def bestsplit(x,y):
-    lowest_imp = 1 # OUTER BOUNDARY OF GINI INDEX RANGE
-    best_split = -np.infty #
-        
+    lowest_imp = 1 
     x_sorted = np.sort(np.unique(x))
-    candidate_splits = (x_sorted[0:-1]+x_sorted[1:len(x)])/2
+    candidate_splits = (x_sorted[0:-1]+x_sorted[1:len(x)])/2 # WHAT TO DO IF THERE ARE NO CANDIDATE SPLITS?
+
+    #print(f"X : {x}, Y : {y}, SORTED X : {x_sorted}, CANDIDATE SPLITS : {candidate_splits}")
+
+    best_split = candidate_splits[0]
 
     for split in candidate_splits:
         left_child = y[x <= split]
@@ -37,50 +38,43 @@ def bestsplit(x,y):
     return best_split
 
 def tree_grow(x, y, nmin, minleaf, nfeat):
-    root_node = Node()
+    node_index = 1
+    root_node = Node(node_index=1)
     extend_node(root_node, x, y, nmin, minleaf, nfeat)
     return Tree(root_node)
 
 def extend_node(node, x, y, nmin, minleaf, nfeat):
     _, num_of_obs = x.shape
+        
+    if nmin <= num_of_obs and 0<impurity(y):
+        feature_index = np.random.choice(np.arange(0,num_of_obs,1))
+        feature_values = x[:, feature_index]
+        best_split = bestsplit(feature_values, y)
 
-    if nmin<=num_of_obs:
-        if 0<impurity(y):
-            feature_index = np.random.choice(np.arange(0,num_of_obs,1))
-            feature_values = x[:, feature_index]
-            best_split = bestsplit(feature_values, y)
+        left = feature_values[feature_values <= best_split]
+        right = feature_values[best_split < feature_values]
 
-            left = feature_values[feature_values <= best_split]
-            right = feature_values[best_split < feature_values]
+        left_labels = y[feature_values <= best_split]
+        right_labels = y[best_split < feature_values]
 
-            left_labels = y[feature_values <= best_split]
-            right_labels = y[best_split < feature_values]
+        node.feature_value = feature_index
+        node.split_threshold = best_split
 
-            node.feature_value = feature_index
-            node.split_threshold = best_split
+        node.left_child = Node(node_index=0)
+        node.right_child = Node(node_index=0)
 
-            node.left_child = Node()
-            node.right_child = Node()
+        print(f"\n left : {left} \n right : {right} \n left_labels : {left_labels} \n right_labels : {right_labels} \n feature_index : {feature_index} \n split : {best_split} \n")
 
-            print(f"\n left : {left} \n right : {right} \n left_labels : {left_labels} \n right_labels : {right_labels} \n feature_index : {feature_index} \n split : {best_split} \n")
-
-            if minleaf<=len(left) and minleaf<=len(right):
-                extend_node(node.left_child, x[feature_values<=best_split], left_labels, nmin, minleaf, nfeat)
-                extend_node(node.right_child, x[best_split<feature_values], right_labels, nmin, minleaf, nfeat)
-            else:
-                node.left_child.is_leaf = node.right_child.is_leaf = True
-                node.left_child.feature_value = 1 # TODO: ASSIGN MAJORITY CLASS
-                node.right_child.feature_value = 1 # TODO: ASSIGN MAJORITY CLASS 
-
-    node.is_leaf = True
-    node.feature_value = 1 # TODO: ASSIGN MAJORITY CLASS
-
-    
+        if minleaf<=len(left) and minleaf<=len(right):
+            extend_node(node.left_child, x[feature_values<=best_split], left_labels, nmin, minleaf, nfeat)
+            extend_node(node.right_child, x[best_split<feature_values], right_labels, nmin, minleaf, nfeat)
 
 def tree_pred(x, tr):
     current = tr.root # CONCEPT
 
     while not current.is_leaf:
+        print(x[current.feature_value, current.split_threshold])
+        print(x[current.feature_value], current.split_threshold)
         if x[current.feature_value] <= current.split_threshold:
             current = current.left_child
         else:
@@ -105,7 +99,8 @@ if __name__ == "__main__":
     X = CREDIT_DATA[:,:5] 
     Y = CREDIT_DATA[:,5]
     tree = tree_grow(x=X, y=Y, nmin = 1, minleaf = 1, nfeat = 1)
-    #tree.node_repr(current=tree.root) #TODO: ADD INDICES
-    tree_pred(x=X,tr=tree)
+    tree.node_repr(current=tree.root) #TODO: ADD INDICES
+    
+    tree_pred(x=X[3],tr=tree)
    
   
