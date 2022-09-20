@@ -15,7 +15,7 @@ def bestsplit(x,y):
     lowest_imp = 1 
     x_sorted = np.sort(np.unique(x))
     candidate_splits = (x_sorted[0:-1]+x_sorted[1:len(x)])/2 # MAKE LEAF NODE IF THERE ARE NO CANDIDATE SPLITS
-    best_split = candidate_splits[0]
+    best_split = None 
 
     for split in candidate_splits:
         left_child = y[x <= split]
@@ -35,52 +35,66 @@ def bestsplit(x,y):
     return best_split
 
 def tree_grow(x, y, nmin, minleaf, nfeat):
-    node_index = 1
-    root_node = Node(node_index=1)
+    #node_index = 1
+    root_node = Node()
     extend_node(root_node, x, y, nmin, minleaf, nfeat)
     return Tree(root_node)
 
 def extend_node(node, x, y, nmin, minleaf, nfeat):
+    # CONSTRUCT LEAF NODE IF (1) IMPURITY EQUALS ZERO
+    #                        (2) THERE ARE NO CANDIDATE SPLITS 
+    #                        (3) THE NUMBER OF OBSERVATIONS IS TOO LOW
+    #                        (4) THE RESULTING LEAF NODES HAVE TOO LITTLE OBSERVATIONS
+
     _, num_of_obs = x.shape
+    feature_index = np.random.choice(np.arange(0,num_of_obs,1))
+    feature_values = x[:, feature_index]
+    best_split = bestsplit(feature_values, y)
+    majority_class = collections.Counter(y).most_common(1)[0][0]
 
-    # LEAF NODE IF IMPURITY EQUALS ZERO
-    #           IF THERE ARE NO CANDIDATE SPLITS (#TODO)
-    #           IF THE NUMBER OF OBSERVATIONS IS TOO LOW
-    #           IF THE RESULTING LEAF NODES HAVE TOO LITTLE OBSERVATIONS
+    if not best_split or num_of_obs<nmin or impurity(y)==0: # CONDITIONS (1), (2), (4)
+        node.is_leaf = True
+        node.feature_value = majority_class
+        node.name="LEAF"
+        return
+
+    left = feature_values[feature_values <= best_split]
+    right = feature_values[best_split < feature_values]
+
+    left_labels = y[feature_values <= best_split]
+    right_labels = y[best_split < feature_values]
+
+    node.feature_value = feature_index
+    node.split_threshold = best_split
+
+    node.left_child = Node()
+    node.right_child = Node()
+
+    print(f"\n left : {left} \n right : {right} \n left_labels : {left_labels} \
+                 \n right_labels : {right_labels} \n feature_index : {feature_index} \n split : {best_split} \n")
+
+    if len(left)<minleaf or len(right)<minleaf:
+        node.is_leaf = True
+        node.feature_value = majority_class
+        node.name="LEAF"
+        return
+
+    node.name = ATTRIBUTES[feature_index]
+    extend_node(node.left_child, x[feature_values<=best_split], left_labels, nmin, minleaf, nfeat)
+    extend_node(node.right_child, x[best_split<feature_values], right_labels, nmin, minleaf, nfeat)
         
-    if nmin <= num_of_obs and 0<impurity(y):
-        feature_index = np.random.choice(np.arange(0,num_of_obs,1))
-        feature_values = x[:, feature_index]
-        best_split = bestsplit(feature_values, y)
-
-        left = feature_values[feature_values <= best_split]
-        right = feature_values[best_split < feature_values]
-
-        left_labels = y[feature_values <= best_split]
-        right_labels = y[best_split < feature_values]
-
-        node.feature_value = feature_index
-        node.split_threshold = best_split
-
-        node.left_child = Node(node_index=0)
-        node.right_child = Node(node_index=0)
-
-        print(f"\n left : {left} \n right : {right} \n left_labels : {left_labels} \n right_labels : {right_labels} \n feature_index : {feature_index} \n split : {best_split} \n")
-
-        if minleaf<=len(left) and minleaf<=len(right):
-            extend_node(node.left_child, x[feature_values<=best_split], left_labels, nmin, minleaf, nfeat)
-            extend_node(node.right_child, x[best_split<feature_values], right_labels, nmin, minleaf, nfeat)
 
 def tree_pred(x, tr):
-    current = tr.root # CONCEPT
+    current = tr.root 
 
     while not current.is_leaf:
-        print(x[current.feature_value, current.split_threshold])
-        print(x[current.feature_value], current.split_threshold)
-        if x[current.feature_value] <= current.split_threshold:
+        feature_value = int(current.feature_value)
+        if x[feature_value] <= current.split_threshold:
             current = current.left_child
+            print(f"LEFT CHILD : {x[feature_value], current.split_threshold}")
         else:
             current = current.right_child
+            print(f"RIGHT CHILD : {x[feature_value], current.split_threshold}")
     
     return current.feature_value
 
@@ -103,6 +117,10 @@ if __name__ == "__main__":
     tree = tree_grow(x=X, y=Y, nmin = 1, minleaf = 1, nfeat = 1)
     tree.node_repr(current=tree.root) #TODO: ADD INDICES
     
-    tree_pred(x=X[3],tr=tree)
+    pred = tree_pred(x=X[3],tr=tree)
+
+    print(f"X : {X[3]}\n \
+            PRED : {pred} \n")
+
    
   
