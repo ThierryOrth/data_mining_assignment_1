@@ -1,0 +1,3 @@
+digraph "Classification Tree" {
+	A [label=age]
+}

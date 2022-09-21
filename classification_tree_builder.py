@@ -4,17 +4,21 @@ from tree_structures import Node, Tree
 import collections
 
 
-def impurity(y):
+def impurity(y:np.array):
+    """Computes impurity using the Gini index as impurity function."""
     total = len(y)
     p_zeros = len(y[y[:] == 0])/total
     p_ones = len(y[y[:]==1])/total
     return p_zeros*p_ones
 
-def bestsplit(x,y):
+def bestsplit(x:np.array, y:np.array)->float:
+    """Finds the best split from a range of candidate splits
+        using the Gini index as impurity function."""
+
     lowest_imp = 1 
     x_sorted = np.sort(np.unique(x))
-    candidate_splits = (x_sorted[0:-1]+x_sorted[1:len(x)])/2 # MAKE LEAF NODE IF THERE ARE NO CANDIDATE SPLITS
-    best_split = None 
+    candidate_splits = (x_sorted[0:-1]+x_sorted[1:len(x)])/2 
+    best_split = None # IF THIS VALUE IS RETURNED, THEN WE KNOW THAT THERE EXISTS NO POSSIBLE SPLIT
 
     for split in candidate_splits:
         left_child = y[x <= split]
@@ -33,17 +37,18 @@ def bestsplit(x,y):
 
     return best_split
 
-def tree_grow(x, y, nmin, minleaf, nfeat):
-    #node_index = 1
+def tree_grow(x:np.array, y:np.array, nmin:int, minleaf:int, nfeat:int)->Tree:
+    """Starts with an initial node, extends it and returns a tree consisting of
+        the initial node as root."""
+
     root_node = Node()
     extend_node(root_node, x, y, nmin, minleaf, nfeat)
     return Tree(root_node)
 
-def extend_node(node, x, y, nmin, minleaf, nfeat):
-    # CONSTRUCT LEAF NODE IF (1) IMPURITY EQUALS ZERO
-    #                        (2) THERE ARE NO CANDIDATE SPLITS 
-    #                        (3) THE NUMBER OF OBSERVATIONS IS TOO LOW
-    #                        (4) THE RESULTING LEAF NODES HAVE TOO LITTLE OBSERVATIONS
+def extend_node(node:Node, x:np.array, y:np.array, nmin:int, minleaf:int, nfeat:int):
+    """Given a current node, checks whether it can be extended. If not, the node becomes
+        a leaf node. If so, then we split the node into two child nodes, which are fed into
+        the same function by recursion."""
 
     _, num_of_obs = x.shape
     feature_index = np.random.choice(np.arange(0,num_of_obs,1))
@@ -51,7 +56,9 @@ def extend_node(node, x, y, nmin, minleaf, nfeat):
     best_split = bestsplit(feature_values, y)
     majority_class = collections.Counter(y).most_common(1)[0][0]
 
-    if not best_split or num_of_obs<nmin or impurity(y)==0: # CONDITIONS (1), (2), (4)
+    # MAKE A LEAF NODE IF THERE EXISTS NO SPLIT, THE NUMBERS OF 
+    # OBSERVATIONS IS TOO LOW OR IMPURITY EQUALS ZERO
+    if not best_split or num_of_obs<nmin or impurity(y)==0: 
         node.is_leaf = True
         node.feature_value = majority_class
         return
@@ -64,6 +71,9 @@ def extend_node(node, x, y, nmin, minleaf, nfeat):
 
     print(f"\n left : {left} \n right : {right} \n left_labels : {left_labels} \
                  \n right_labels : {right_labels} \n feature_index : {feature_index} \n split : {best_split} \n")
+
+    # MAKE A LEAF NODE IF THE NUMBER OF OBSERVATIONS 
+    # FOR EITHER CHILD NODE IS TOO LOW
 
     if len(left)<minleaf or len(right)<minleaf:
         node.is_leaf = True
@@ -78,11 +88,12 @@ def extend_node(node, x, y, nmin, minleaf, nfeat):
     extend_node(node.left_child, x[feature_values<=best_split], left_labels, nmin, minleaf, nfeat)
     extend_node(node.right_child, x[best_split<feature_values], right_labels, nmin, minleaf, nfeat)
         
-
-def tree_pred(x, tr):
+def tree_pred(x:np.array, tr:Tree) -> float:
+    """"Traverses the tree by comparing feature value with split threshold until it finds a leaf. If that leaf is reached, 
+        we predict the majority vote."""
     current = tr.root 
 
-    while not current.is_leaf:
+    while not current.is_leaf: 
         feature_value = int(current.feature_value)
         if x[feature_value] <= current.split_threshold:
             current = current.left_child
@@ -93,16 +104,14 @@ def tree_pred(x, tr):
     
     return current.feature_value
 
-def tree_grow_b(x, y, nmin, minleaf, nfeat, m):
+def tree_grow_b(x:np.array, y:np.array, nmin:int, minleaf:int, nfeat:int, m:int)->list:
     trees = []
     for i in range(m):
         pass
     return trees
 
-def tree_pred_b(x, trs):
+def tree_pred_b(x:np.array, trs):
     pass
-
-
 
 if __name__ == "__main__":
     #bestsplit(CREDIT_DATA[:,3],CREDIT_DATA[:,5])
@@ -110,12 +119,13 @@ if __name__ == "__main__":
     X = CREDIT_DATA[:,:5] 
     Y = CREDIT_DATA[:,5]
     tree = tree_grow(x=X, y=Y, nmin = 1, minleaf = 1, nfeat = 1)
-    tree.node_repr(current=tree.root) #TODO: ADD INDICES
-    
     pred = tree_pred(x=X[3],tr=tree)
 
     print(f"X : {X[3]}\n \
             PRED : {pred} \n")
 
+    tree.visualize_tree_2(tree.root)
+
+    
    
   
