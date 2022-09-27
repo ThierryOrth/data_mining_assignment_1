@@ -1,7 +1,7 @@
-import numpy as np
-from data_loader import CREDIT_DATA, PIMA_DATA
-from tree_structures import Node, Tree
 import collections
+import numpy as np
+from data_loader import credit_data, pima_data
+from tree_structures import Node, Tree
 
 def gini_index(y:np.array) -> float:
     """Computes the Gini index as impurity function."""
@@ -12,7 +12,7 @@ def gini_index(y:np.array) -> float:
     gini = (left/total)*(right/total)
     return gini
 
-def bestsplit(x:np.array,y:np.array):
+def bestsplit(x:np.array, y:np.array):
     """Finds the best split from a range of candidate splits
             using the Gini index as impurity function."""
     best_reduction = 0
@@ -25,11 +25,12 @@ def bestsplit(x:np.array,y:np.array):
         left_child = y[x <= split]
         right_child = y[split < x]
 
-        imp_left = gini_index(left_child)
-        imp_right = gini_index(right_child)
+        imp_parent = gini_index(y)
         pi_left = len(left_child) / len(x)
         pi_right = len(right_child) / len(x)
-        imp_parent = gini_index(y)
+        imp_left = gini_index(left_child)
+        imp_right = gini_index(right_child)
+        
         imp = imp_parent - ((pi_left * imp_left) + (pi_right * imp_right))
 
         if best_reduction < imp:
@@ -46,7 +47,7 @@ def tree_grow(x:np.array,y:np.array,nmin:int,minleaf:int,nfeat:int) -> Tree:
     extend_node(root_node, x, y, nmin, minleaf, nfeat)
     return Tree(root_node)
 
-def extend_node(node:Node, x,y,nmin,minleaf,nfeat):
+def extend_node(node:Node, x:np.array, y:np.array, nmin:int, minleaf:int, nfeat:int):
     """Given a current node, checks whether it can be extended. If not, the node becomes
             a leaf node. If so, then we split the node into two child nodes, which are fed into
             the same function by recursion."""
@@ -117,7 +118,7 @@ def tree_pred(x: np.array, tr: Tree) -> float:
 
     return current.feature_value
 
-def tree_grow_b(x,y,nmin, minleaf, nfeat, m):
+def tree_grow_b(x:np.array, y:np.array, nmin:int, minleaf:int, nfeat:int, m:int) -> list:
     n_of_obs, n_of_feat = x.shape
     trees = []
 
@@ -143,18 +144,14 @@ def tree_pred_b(x: np.array, trs: list) -> float:
     return majority_class
 
 if __name__ == "__main__":
-    #bestsplit(CREDIT_DATA[:,3],CREDIT_DATA[:,5])
-
-    X = CREDIT_DATA[:, :4]
-    Y = CREDIT_DATA[:, 5]
+    X_credit = credit_data[:, :4]
+    Y_credit = credit_data[:, 5]
 
     # n_of_obs, n_of_feat = PIMA_DATA.shape
 
-    # X_P = PIMA_DATA[:, :n_of_feat-1]
-    # Y_P = PIMA_DATA[:, n_of_feat-1]
+    # X_pima = pima_data[:, :n_of_feat-1]
+    # Y_pima = pima_data[:, n_of_feat-1]
 
     # tree = tree_grow(x=X_P, y=Y_P, nmin=20, minleaf=5, nfeat=n_of_feat)
 
-    
-    #print(n_of_obs)
     

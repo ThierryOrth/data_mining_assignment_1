@@ -1,7 +1,3 @@
-import graphviz
-import string
-import os
-
 class Node:
     """Constructs a node with a set of internal properties useful 
         for classification trees: the feature index in the data matrix,

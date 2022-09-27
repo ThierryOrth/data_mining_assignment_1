@@ -1,22 +1,21 @@
 import numpy as np
-import os
 import pandas as pd
+import os
 
+dir = os.getcwd()
 
-DIR = os.getcwd()
+credit_data = np.genfromtxt(dir+"/CREDIT.txt", delimiter=",", skip_header=True)
+pima_data = np.genfromtxt(dir+"/pima.txt", delimiter=",", skip_header=False)
 
-CREDIT_DATA = np.genfromtxt(DIR+"/CREDIT.txt", delimiter=",", skip_header=True)
-PIMA_DATA = np.genfromtxt(DIR+"/pima.txt", delimiter=",", skip_header=False)
-
-BUG_DATAFRAME_TRAIN = pd.read_csv("eclipse-metrics-packages-2.0.csv", delimiter=";")
-BUG_DATAFRAME_TEST = pd.read_csv("eclipse-metrics-packages-3.0.csv", delimiter=";")
+bug_dataframe_train = pd.read_csv("eclipse-metrics-packages-2.0.csv", delimiter=";")
+bug_dataframe_test = pd.read_csv("eclipse-metrics-packages-3.0.csv", delimiter=";")
  
 column_indices=[2]+[i for i in range(4, 44)]
-x_train = BUG_DATAFRAME_TRAIN.iloc[:,column_indices].to_numpy()
-y_train = BUG_DATAFRAME_TRAIN.iloc[:,3].to_numpy()
+x_train = bug_dataframe_train.iloc[:,column_indices].to_numpy()
+y_train = bug_dataframe_train.iloc[:,3].to_numpy()
 y_train = np.where(y_train>0.0, 1.0, 0.0)
 
-x_test = BUG_DATAFRAME_TEST.iloc[:,column_indices].to_numpy()
-y_test = BUG_DATAFRAME_TEST.iloc[:,3].to_numpy()
+x_test = bug_dataframe_test.iloc[:,column_indices].to_numpy()
+y_test = bug_dataframe_test.iloc[:,3].to_numpy()
 y_test = np.where(y_test>0.0, 1.0, 0.0)
 
