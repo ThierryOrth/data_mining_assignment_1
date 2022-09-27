@@ -1,10 +1,9 @@
-from gzip import FNAME
 import numpy as np
 from data_loader import CREDIT_DATA, PIMA_DATA
 from tree_structures import Node, Tree
 import collections
 
-def gini_index(y):
+def gini_index(y:np.array) -> float:
     """Computes the Gini index as impurity function."""
     left = y[y[:]==1].size #Amount of observations in the left child
     right = y[y[:]==0].size #Amount of observations in the right child
@@ -13,10 +12,10 @@ def gini_index(y):
     gini = (left/total)*(right/total)
     return gini
 
-def bestsplit(x,y):
+def bestsplit(x:np.array,y:np.array):
     """Finds the best split from a range of candidate splits
             using the Gini index as impurity function."""
-    highest_red = 0
+    best_reduction = 0
     x_sorted = np.sort(np.unique(x))
     candidate_splitpoints = (x_sorted[0:(x_sorted.size-1)] + x_sorted[1:x_sorted.size]) / 2
     best_split = None  # IF THIS VALUE IS RETURNED, THEN WE KNOW THAT THERE EXISTS NO POSSIBLE SPLIT
@@ -33,16 +32,16 @@ def bestsplit(x,y):
         imp_parent = gini_index(y)
         imp = imp_parent - ((pi_left * imp_left) + (pi_right * imp_right))
 
-        if imp > highest_red:
-            highest_red = imp
+        if best_reduction < imp:
+            best_reduction = imp
             best_split = split
     #return the best split option with the corresponding impurity reduction
-    return best_split, highest_red
 
-def tree_grow(x,y,nmin,minleaf,nfeat):
+    return best_split, best_reduction
+
+def tree_grow(x:np.array,y:np.array,nmin:int,minleaf:int,nfeat:int) -> Tree:
     """Starts with an initial node, extends it and returns a tree consisting of
             the initial node as root."""
-
     root_node = Node()
     extend_node(root_node, x, y, nmin, minleaf, nfeat)
     return Tree(root_node)
@@ -64,12 +63,11 @@ def extend_node(node:Node, x,y,nmin,minleaf,nfeat):
         splits.append(split)
 
     majority_class = collections.Counter(y).most_common(1)[0][0]
-    #print(majority_class)
+
     #check for all the best splits of all features which one
     # of these has the best impurity reduction
-    best_red = np.max([b[1]for b in splits])
-    #get the index for the splitpoint
-    feature_index = [tup[1] for tup in splits].index(best_red)
+    best_reduction = np.max([split[1] for split in splits])
+    feature_index = [tup[1] for tup in splits].index(best_reduction)
     feature_values = x[:, feature_index]
     #return the best split point for the best split of all features
     best_split = splits[feature_index][0]
@@ -87,8 +85,6 @@ def extend_node(node:Node, x,y,nmin,minleaf,nfeat):
     left_labels = y[feature_values <= best_split]
     right_labels = y[best_split < feature_values]
 
-    #print(f"\n left : {left} \n right : {right} \n left_labels : {left_labels} \
-     #               \n right_labels : {right_labels} \n feature_index : {feature_index} \n split : {best_split} \n")
 
     # MAKE A LEAF NODE IF THE NUMBER OF OBSERVATIONS
     # FOR EITHER CHILD NODE IS TOO LOW
@@ -113,65 +109,38 @@ def tree_pred(x: np.array, tr: Tree) -> float:
 
     while not current.is_leaf:
         feature_value = int(current.feature_value)
+
         if x[feature_value] <= current.split_threshold:
             current = current.left_child
-            #print(f"LEFT CHILD : {x[feature_value], current.split_threshold}")
         else:
             current = current.right_child
-            #print(f"RIGHT CHILD : {x[feature_value], current.split_threshold}")
 
     return current.feature_value
 
-def tree_grow_b(x,y,nmin,minleaf,nfeat, m):
+def tree_grow_b(x,y,nmin, minleaf, nfeat, m):
     n_of_obs, n_of_feat = x.shape
     trees = []
 
     for i in range(m):
+        root_node = Node()
         indexes = np.random.choice(np.arange(0,n_of_obs,1), n_of_obs, replace=True)
+
         sampled_x = x[indexes]
         sampled_y = y[indexes]  
-        root_node = Node()
         extend_node(root_node, sampled_x, sampled_y, nmin, minleaf, nfeat)
         trees.append(Tree(root_node))
 
     return trees
 
-def tree_pred_b(x: np.array, trs: list):
-    preds = []
+def tree_pred_b(x: np.array, trs: list) -> float:
+    predictions = []
     
     for tr in trs:
-        pred = tree_pred(x, tr)
+        predictions.append(tree_pred(x, tr))
 
-    return preds/len(preds)
+    majority_class = collections.Counter(predictions).most_common(1)[0][0]
 
-def metrics(y_true,y_pred,pos=1.0, neg=0.0):
-    n = len(y_true)
-    tp = fp = tn = fn = 0
-
-    for i in range(y_true):
-        if y_true == pos and y_pred == pos:
-            tp+=1
-        elif y_true == pos and y_pred == neg:
-            fp+=1
-        elif y_true == neg and y_pred == pos:
-            fn+=1
-        elif y_true == neg and y_pred == neg:
-            tn+=1
-    
-    def confusion_matrix(tp,fp,tn,fn):
-        return np.array([[tp,fn],[fp,tn]])
-
-    def accuracy(tp,fp,tn,fn):
-        return tp/(tp+fp+tn+fn)
-
-    def precision(tp,fp):
-        return tp/(tp+fp)
-
-    def recall(tp,fn):
-        return tp/(tp+fn)
-
-    return confusion_matrix(tp,fp,tn,fn), accuracy(tp,fp,tn,fn), \
-                                     precision(tp,fp), recall(tp,fn)
+    return majority_class
 
 if __name__ == "__main__":
     #bestsplit(CREDIT_DATA[:,3],CREDIT_DATA[:,5])
@@ -179,21 +148,12 @@ if __name__ == "__main__":
     X = CREDIT_DATA[:, :4]
     Y = CREDIT_DATA[:, 5]
 
-    
-    # tree = tree_grow(x=X, y=Y, nmin = 2, minleaf = 1, nfeat = 4)
-    # pred = tree_pred(x=X[3],tr=tree)
+    # n_of_obs, n_of_feat = PIMA_DATA.shape
 
-    # """print(f"X : {X[3]}\n \
-    #         PRED : {pred} \n")"""
+    # X_P = PIMA_DATA[:, :n_of_feat-1]
+    # Y_P = PIMA_DATA[:, n_of_feat-1]
 
-    # tree.visualize_tree_2(tree.root)
-
-    n_of_obs, n_of_feat = PIMA_DATA.shape
-
-    X_P = PIMA_DATA[:, :n_of_feat-1]
-    Y_P = PIMA_DATA[:, n_of_feat-1]
-
-    tree = tree_grow(x=X_P, y=Y_P, nmin=20, minleaf=5, nfeat=n_of_feat)
+    # tree = tree_grow(x=X_P, y=Y_P, nmin=20, minleaf=5, nfeat=n_of_feat)
 
     
     #print(n_of_obs)

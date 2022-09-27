@@ -1,4 +1,3 @@
-from data_loader import ATTRIBUTES
 import graphviz
 import string
 import os
