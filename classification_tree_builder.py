@@ -1,6 +1,7 @@
+from gzip import FNAME
 import numpy as np
-from data_loader import ATTRIBUTES, CREDIT_DATA
-from tree_structure import Node, Tree
+from data_loader import CREDIT_DATA, PIMA_DATA
+from tree_structures import Node, Tree
 import collections
 
 def gini_index(y):
@@ -11,8 +12,6 @@ def gini_index(y):
     ##Calculate the Gini index
     gini = (left/total)*(right/total)
     return gini
-
-
 
 def bestsplit(x,y):
     """Finds the best split from a range of candidate splits
@@ -53,13 +52,19 @@ def extend_node(node:Node, x,y,nmin,minleaf,nfeat):
             a leaf node. If so, then we split the node into two child nodes, which are fed into
             the same function by recursion."""
     splits = []
-    num_of_obs, num_of_classes = x.shape
+    num_of_obs, n_of_feat = x.shape
 
-    for c in range(num_of_classes):
+    if nfeat<n_of_feat:
+        indexes = np.random.choice(np.arange(0,nfeat,1), nfeat, replace=False)
+        x = x[:, indexes]
+        n_of_feat = nfeat
+
+    for c in range(n_of_feat):
         split = bestsplit(x[:,c],y)
         splits.append(split)
+
     majority_class = collections.Counter(y).most_common(1)[0][0]
-    print(majority_class)
+    #print(majority_class)
     #check for all the best splits of all features which one
     # of these has the best impurity reduction
     best_red = np.max([b[1]for b in splits])
@@ -110,22 +115,86 @@ def tree_pred(x: np.array, tr: Tree) -> float:
         feature_value = int(current.feature_value)
         if x[feature_value] <= current.split_threshold:
             current = current.left_child
-            print(f"LEFT CHILD : {x[feature_value], current.split_threshold}")
+            #print(f"LEFT CHILD : {x[feature_value], current.split_threshold}")
         else:
             current = current.right_child
-            print(f"RIGHT CHILD : {x[feature_value], current.split_threshold}")
+            #print(f"RIGHT CHILD : {x[feature_value], current.split_threshold}")
 
     return current.feature_value
+
+def tree_grow_b(x,y,nmin,minleaf,nfeat, m):
+    n_of_obs, n_of_feat = x.shape
+    trees = []
+
+    for i in range(m):
+        indexes = np.random.choice(np.arange(0,n_of_obs,1), n_of_obs, replace=True)
+        sampled_x = x[indexes]
+        sampled_y = y[indexes]  
+        root_node = Node()
+        extend_node(root_node, sampled_x, sampled_y, nmin, minleaf, nfeat)
+        trees.append(Tree(root_node))
+
+    return trees
+
+def tree_pred_b(x: np.array, trs: list):
+    preds = []
+    
+    for tr in trs:
+        pred = tree_pred(x, tr)
+
+    return preds/len(preds)
+
+def metrics(y_true,y_pred,pos=1.0, neg=0.0):
+    n = len(y_true)
+    tp = fp = tn = fn = 0
+
+    for i in range(y_true):
+        if y_true == pos and y_pred == pos:
+            tp+=1
+        elif y_true == pos and y_pred == neg:
+            fp+=1
+        elif y_true == neg and y_pred == pos:
+            fn+=1
+        elif y_true == neg and y_pred == neg:
+            tn+=1
+    
+    def confusion_matrix(tp,fp,tn,fn):
+        return np.array([[tp,fn],[fp,tn]])
+
+    def accuracy(tp,fp,tn,fn):
+        return tp/(tp+fp+tn+fn)
+
+    def precision(tp,fp):
+        return tp/(tp+fp)
+
+    def recall(tp,fn):
+        return tp/(tp+fn)
+
+    return confusion_matrix(tp,fp,tn,fn), accuracy(tp,fp,tn,fn), \
+                                     precision(tp,fp), recall(tp,fn)
 
 if __name__ == "__main__":
     #bestsplit(CREDIT_DATA[:,3],CREDIT_DATA[:,5])
 
-    X = CREDIT_DATA[:,:4]
-    Y = CREDIT_DATA[:,5]
-    tree = tree_grow(x=X, y=Y, nmin = 2, minleaf = 1, nfeat = 4)
-    pred = tree_pred(x=X[3],tr=tree)
+    X = CREDIT_DATA[:, :4]
+    Y = CREDIT_DATA[:, 5]
 
-    """print(f"X : {X[3]}\n \
-            PRED : {pred} \n")"""
+    
+    # tree = tree_grow(x=X, y=Y, nmin = 2, minleaf = 1, nfeat = 4)
+    # pred = tree_pred(x=X[3],tr=tree)
 
-    tree.visualize_tree_2(tree.root)
+    # """print(f"X : {X[3]}\n \
+    #         PRED : {pred} \n")"""
+
+    # tree.visualize_tree_2(tree.root)
+
+    n_of_obs, n_of_feat = PIMA_DATA.shape
+
+    X_P = PIMA_DATA[:, :n_of_feat-1]
+    Y_P = PIMA_DATA[:, n_of_feat-1]
+
+    tree = tree_grow(x=X_P, y=Y_P, nmin=20, minleaf=5, nfeat=n_of_feat)
+
+    
+    #print(n_of_obs)
+    
