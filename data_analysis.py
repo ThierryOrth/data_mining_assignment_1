@@ -40,7 +40,7 @@ if __name__ == "__main__":
     n , _ = y_train.shape
     tree = tree_grow(x_train, x_test, nmin=15, minleaf=5, nfeat=41)
     tree_bagged = tree_grow_b(x_train, x_test, nmin=15, minleaf=5, nfeat=41, m=100)
-    random_forest = tree_grow_b(x_train, x_test, nmin=15, minleaf=5, nfeat=41, m=100) # set nfeat to 6 for analysis
+    random_forest = tree_grow_b(x_train, x_test, nmin=15, minleaf=5, nfeat=6, m=100) # set nfeat to 6 for analysis
 
     y_pred_n = [tree_pred(y_train[i, :], tree) for i in range(n)]
     conf_matrix_n, acc_n, prec_n, rec_n = evaluation_metrics(y_test, y_pred_n)
