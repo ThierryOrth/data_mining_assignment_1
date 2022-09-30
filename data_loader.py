@@ -12,10 +12,16 @@ bug_dataframe_test = pd.read_csv("eclipse-metrics-packages-3.0.csv", delimiter="
  
 column_indices=[2]+[i for i in range(4, 44)]
 x_train = bug_dataframe_train.iloc[:,column_indices].to_numpy()
-y_train = bug_dataframe_train.iloc[:,3].to_numpy()
-y_train = np.where(y_train>0.0, 1.0, 0.0)
+x_test = bug_dataframe_train.iloc[:,3].to_numpy()
 
-x_test = bug_dataframe_test.iloc[:,column_indices].to_numpy()
+y_train = bug_dataframe_test.iloc[:,column_indices].to_numpy()
 y_test = bug_dataframe_test.iloc[:,3].to_numpy()
-y_test = np.where(y_test>0.0, 1.0, 0.0)
 
+# PREPROCESSING STEP: set pre and post to binary
+x_train[:,0] = np.where(0<x_train[:,0], 1.0, 0.0)
+x_test = np.where(0.0<x_test, 1.0, 0.0)
+
+y_train[:,0] = np.where(0<y_train[:,0], 1.0, 0.0)
+y_test = np.where(0.0<y_test, 1.0, 0.0)
+
+#print(x_train.shape,x_test.shape,y_train.shape,y_test.shape)

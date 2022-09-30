@@ -37,26 +37,20 @@ def print_results(conf_matrix, acc, prec, rec, model_name):
     print(f"MODEL: {model_name} \n CONFUSION MATRIX: \n {conf_matrix} \n ACCURACY: {acc} \n PRECISION: {prec} \n RECALL: {rec} \n")
 
 if __name__ == "__main__":
-    n , _ = x_test.shape
+    n , _ = y_train.shape
+    tree = tree_grow(x_train, x_test, nmin=15, minleaf=5, nfeat=41)
+    tree_bagged = tree_grow_b(x_train, x_test, nmin=15, minleaf=5, nfeat=41, m=100)
+    random_forest = tree_grow_b(x_train, x_test, nmin=15, minleaf=5, nfeat=41, m=100) # set nfeat to 6 for analysis
 
-    tree = tree_grow(x=x_train, y=y_train, nmin=15, minleaf=5, nfeat=41)
-    tree_bagged = tree_grow_b(x=x_train, y=y_train, nmin=15, minleaf=5, nfeat=41, m=100)
-    random_forest = tree_grow_b(x=x_train, y=y_train, nmin=15, minleaf=5, nfeat=41, m=100) # nfeat:=6 for analysis
-
-    y_pred_n = [tree_pred(x_test[i, :], tree) for i in range(n)]
+    y_pred_n = [tree_pred(y_train[i, :], tree) for i in range(n)]
     conf_matrix_n, acc_n, prec_n, rec_n = evaluation_metrics(y_test, y_pred_n)
     print_results(conf_matrix_n, acc_n, prec_n, rec_n, model_name="REGULAR CLASSIFICATION TREE")
 
-    y_pred_b = [tree_pred_b(x_test[i, :], tree_bagged) for i in range(n)]
+    y_pred_b = [tree_pred_b(y_train[i, :], tree_bagged) for i in range(n)]
     conf_matrix_b, acc_b, prec_b, rec_b = evaluation_metrics(y_test, y_pred_b)
     print_results(conf_matrix_b, acc_b, prec_b, rec_b, model_name="BAGGED CLASSIFICATION TREE")
 
-    y_pred_f = [tree_pred_b(x_test[i, :], random_forest) for i in range(n)]
+    y_pred_f = [tree_pred_b(y_train[i, :], random_forest) for i in range(n)]
     conf_matrix_f, acc_f, prec_f, rec_f = evaluation_metrics(y_test, y_pred_f)
     print_results(conf_matrix_f, acc_f, prec_f, rec_f, model_name="RANDOM FOREST")
-
-    
-
-    
-
     

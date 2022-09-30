@@ -53,6 +53,7 @@ def extend_node(node:Node, x:np.array, y:np.array, nmin:int, minleaf:int, nfeat:
             the same function by recursion."""
     splits = []
     num_of_obs, n_of_feat = x.shape
+    majority_class = collections.Counter(y).most_common(1)[0][0]
 
     if nfeat<n_of_feat:
         indexes = np.random.choice(np.arange(0,nfeat,1), nfeat, replace=False)
@@ -62,8 +63,6 @@ def extend_node(node:Node, x:np.array, y:np.array, nmin:int, minleaf:int, nfeat:
     for c in range(n_of_feat):
         split = bestsplit(x[:,c],y)
         splits.append(split)
-
-    majority_class = collections.Counter(y).most_common(1)[0][0]
 
     #check for all the best splits of all features which one
     # of these has the best impurity reduction
