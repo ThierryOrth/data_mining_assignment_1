@@ -1,5 +1,6 @@
 import collections
 import numpy as np
+import sys
 from data_loader import credit_data, pima_data
 from tree_structures import Node, Tree
 
@@ -15,12 +16,12 @@ def gini_index(y:np.array) -> float:
 def bestsplit(x:np.array, y:np.array):
     """Finds the best split from a range of candidate splits
             using the Gini index as impurity function."""
-    best_reduction = 0
+    lowest_imp = 0
     x_sorted = np.sort(np.unique(x))
     candidate_splitpoints = (x_sorted[0:(x_sorted.size-1)] + x_sorted[1:x_sorted.size]) / 2
-    best_split = None  # IF THIS VALUE IS RETURNED, THEN WE KNOW THAT THERE EXISTS NO POSSIBLE SPLIT
-
-    ## for every split option calculate the gini index per subgroup.
+    best_split = None  # is no split exists, this value is used to create a leaf node
+   
+    # compute impurity on each splitpoint
     for split in candidate_splitpoints:
         left_child = y[x <= split]
         right_child = y[split < x]
@@ -33,12 +34,12 @@ def bestsplit(x:np.array, y:np.array):
         
         imp = imp_parent - ((pi_left * imp_left) + (pi_right * imp_right))
 
-        if best_reduction < imp:
-            best_reduction = imp
+        # update impurity and splitpoint if lower impurity is found
+        if lowest_imp < imp:
+            lowest_imp = imp
             best_split = split
-    #return the best split option with the corresponding impurity reduction
 
-    return best_split, best_reduction
+    return best_split, lowest_imp
 
 def tree_grow(x:np.array,y:np.array,nmin:int,minleaf:int,nfeat:int) -> Tree:
     """Starts with an initial node, extends it and returns a tree consisting of
@@ -51,30 +52,31 @@ def extend_node(node:Node, x:np.array, y:np.array, nmin:int, minleaf:int, nfeat:
     """Given a current node, checks whether it can be extended. If not, the node becomes
             a leaf node. If so, then we split the node into two child nodes, which are fed into
             the same function by recursion."""
-    splits = []
-    num_of_obs, n_of_feat = x.shape
+    n_of_obs, n_of_feat = x.shape
     majority_class = collections.Counter(y).most_common(1)[0][0]
 
     if nfeat<n_of_feat:
-        indexes = np.random.choice(np.arange(0,nfeat,1), nfeat, replace=False)
-        x = x[:, indexes]
+        indices = np.random.choice(np.arange(0,nfeat,1), nfeat, replace=False)
+        x = x[:, indices]
         n_of_feat = nfeat
-
-    for c in range(n_of_feat):
-        split = bestsplit(x[:,c],y)
-        splits.append(split)
-
-    #check for all the best splits of all features which one
-    # of these has the best impurity reduction
-    best_reduction = np.max([split[1] for split in splits])
-    feature_index = [tup[1] for tup in splits].index(best_reduction)
+    
+    # SELECT SPLIT ON FEATURE THAT YIELDS MINIMAL IMPURITY
+    splits = [bestsplit(x[:,i],y) for i in range(n_of_feat)]
+    feature_index = np.argmin([split[1] for split in splits])
+    best_split, _ = splits[feature_index]
     feature_values = x[:, feature_index]
-    #return the best split point for the best split of all features
-    best_split = splits[feature_index][0]
 
-    # MAKE A LEAF NODE IF THERE EXISTS NO SPLIT, THE NUMBERS OF
-    # OBSERVATIONS IS TOO LOW OR IMPURITY EQUALS ZERO
-    if gini_index(y) == 0 or not best_split or num_of_obs < nmin:
+
+    # THIS DOES NOT PICK OUT A UNIQUE VALUE, AS THERE MIGHT BE DUPLICATE VALUES
+    # best_reduction = np.max([split[1] for split in splits])
+    # feature_index = [tup[1] for tup in splits].index(best_reduction)
+    # feature_values = x[:, feature_index]
+    #return the best split point for the best split of all features
+    # best_split = splits[feature_index][0]
+
+    # create a leaf node if gini impurity is zero, if there exists no split or 
+    # if the number of observations in the node is too low
+    if gini_index(y) == 0 or not best_split or n_of_obs < nmin:
         node.is_leaf = True
         node.feature_value = majority_class
         return
@@ -86,8 +88,7 @@ def extend_node(node:Node, x:np.array, y:np.array, nmin:int, minleaf:int, nfeat:
     right_labels = y[best_split < feature_values]
 
 
-    # MAKE A LEAF NODE IF THE NUMBER OF OBSERVATIONS
-    # FOR EITHER CHILD NODE IS TOO LOW
+    # create a leaf node if the number of observations for leaf nodes is too low
     if len(left) < minleaf or len(right) < minleaf:
         node.is_leaf = True
         node.feature_value = majority_class
@@ -95,9 +96,8 @@ def extend_node(node:Node, x:np.array, y:np.array, nmin:int, minleaf:int, nfeat:
 
     node.feature_value = feature_index
     node.split_threshold = best_split
-
-    node.left_child = Node()
-    node.right_child = Node()
+    node.left_child, node.right_child = Node(), Node()
+    
     extend_node(node.left_child, x[feature_values <= best_split], left_labels, nmin, minleaf, nfeat)
     extend_node(node.right_child, x[best_split < feature_values], right_labels, nmin, minleaf, nfeat)
 
@@ -118,28 +118,30 @@ def tree_pred(x: np.array, tr: Tree) -> float:
     return current.feature_value
 
 def tree_grow_b(x:np.array, y:np.array, nmin:int, minleaf:int, nfeat:int, m:int) -> list:
-    n_of_obs, n_of_feat = x.shape
+    """Grows a tree using bagging: retrieve a sample with replacement. This function can
+        be used for random forests by the hyperparameter nfeat."""
+    n_of_obs, _ = x.shape
     trees = []
 
     for i in range(m):
         root_node = Node()
-        indexes = np.random.choice(np.arange(0,n_of_obs,1), n_of_obs, replace=True)
+        indices = np.random.choice(np.arange(0,n_of_obs,1), n_of_obs, replace=True)
+        sampled_x, sampled_y = x[indices], y[indices]
 
-        sampled_x = x[indexes]
-        sampled_y = y[indexes]  
         extend_node(root_node, sampled_x, sampled_y, nmin, minleaf, nfeat)
         trees.append(Tree(root_node))
 
     return trees
 
 def tree_pred_b(x: np.array, trs: list) -> float:
+    """Computes majority prediction given a feature array 
+            and a collection of classification trees."""
     predictions = []
     
     for tr in trs:
         predictions.append(tree_pred(x, tr))
-
+    
     majority_class = collections.Counter(predictions).most_common(1)[0][0]
-
     return majority_class
 
 if __name__ == "__main__":
