@@ -3,7 +3,7 @@ import numpy as np
 from sklearn.metrics import accuracy_score, confusion_matrix, precision_recall_fscore_support
 import time
 import sys
-
+import os
 
 
 class Node:
@@ -12,12 +12,12 @@ class Node:
         the split threshold, the left and right child nodes and whether 
         it is a leaf or not."""
     def __init__(self):
-        self.feature_index = None # COLUMN IN THE MATRIX FOR NON-TERMINAL NODES, MAJORITY VOTE PREDICTION FOR TERMINAL NODES 
+        self.feature_value = None # COLUMN IN THE MATRIX FOR NON-TERMINAL NODES, majority_label VOTE PREDICTION FOR TERMINAL NODES 
         self.split_threshold = None
         self.left_child = None
         self.right_child = None
         self.is_leaf = False
-        self.majority = None
+        self.majority_label = None
 
 class Tree:
     """Constructs a tree by taking an initial node
@@ -37,7 +37,7 @@ def tree_grow(feature_obs:np.array, class_obs:np.array, nmin:int, minleaf:int, n
 
 def tree_pred(feature_obs: np.array, tr: Tree) -> float:
     """"Traverses the tree by comparing feature value with split threshold until it finds a leaf. If that leaf is reached,
-        we predict the majority vote."""
+        we predict the majority_label vote."""
     pred=[]
 
     # LOOP UNTIL WE REACH A LEAF NODE
@@ -52,7 +52,7 @@ def tree_pred(feature_obs: np.array, tr: Tree) -> float:
                 current = current.right_child
 
         # APPEND MAJORITY LABEL OF LEAF NODE
-        pred.append(current.feature_value)
+        pred.append(current.majority_label)
 
     return pred
 
@@ -74,7 +74,7 @@ def tree_grow_b(feature_obs:np.array, class_obs:np.array, nmin:int, minleaf:int,
     return trees
 
 def tree_pred_b(feature_obs: np.array, trs: list) -> float:
-    """Computes majority prediction given a feature array 
+    """Computes majority_label prediction given a feature array 
        and a collection of classification trees."""
     row_index = len(trs)
     col_index, _ = feature_obs.shape 
@@ -82,13 +82,11 @@ def tree_pred_b(feature_obs: np.array, trs: list) -> float:
     print("shape", predictions.shape)
     
     for index, tree in enumerate(trs):
-        predictions[index, :]=tree_pred(feature_obs,tree)
-        #predictions.append(tree_pred(feature_obs, tree))
+        predictions[index, :] = tree_pred(feature_obs,tree)
 
-    majority_labels = [collections.Counter(predictions[:,i]).most_common(1)[0][0] for i in range(col_index)]
-    print("PREDICTIONS ALL", predictions[:20,:])
-    print("PREDICTIONS MAJ",majority_labels[:20])
-    return majority_labels
+    majority_label_labels = [collections.Counter(predictions[:,i]).most_common(1)[0][0] for i in range(col_index)]
+
+    return majority_label_labels
 
 
 def extend_node(node: Node, feature_obs: np.array, class_obs: np.array, nmin: int, minleaf: int, nfeat: int):
@@ -97,9 +95,9 @@ def extend_node(node: Node, feature_obs: np.array, class_obs: np.array, nmin: in
        the same function by recursion."""
     n_of_obs, n_of_feat = feature_obs.shape
     majority_label = collections.Counter(class_obs).most_common(1)[0][0]
+    node.majority_label = majority_label
     splits = []
-
-    node.majority = majority_label
+    
     ### SOMETHING GOES WRONG IN RANDOM FOREST PART ###
     # SELECT A SUBSET OF FEATURES
     if nfeat < n_of_feat:
@@ -124,10 +122,10 @@ def extend_node(node: Node, feature_obs: np.array, class_obs: np.array, nmin: in
     sorted_splits = sorted(enumerate(splits), key=lambda x: x[1][1])
     for feature_index, (split, _) in sorted_splits:
         feature_values = feature_obs[:, feature_index]
-
+        split_feature = feature_index
         l_feat_obs = feature_obs[feature_obs[:, feature_index] <= split]
         r_feat_obs = feature_obs[feature_obs[:, feature_index] > split]
-
+        
         l_size, _ = l_feat_obs.shape
         r_size, _ = r_feat_obs.shape
 
@@ -137,7 +135,7 @@ def extend_node(node: Node, feature_obs: np.array, class_obs: np.array, nmin: in
     l_class_obs = class_obs[feature_values <= split]
     r_class_obs = class_obs[feature_values > split]
 
-    node.feature_value = feature_index
+    node.feature_value = split_feature
     node.split_threshold = split
     node.left_child, node.right_child = Node(), Node()
 
@@ -167,15 +165,15 @@ def bestsplit(x,y,minleaf):
     for split in candidate_splitpoints:
         left_child = y[x <= split]
         right_child = y[x > split]
-        majority_class = collections.Counter(y).most_common(1)[0][0]
+        majority_label_class = collections.Counter(y).most_common(1)[0][0]
         # MAKE A LEAF NODE IF THE NUMBER OF OBSERVATIONS
         # FOR EITHER CHILD NODE IS TOO LOW
         if len(left_child) >= minleaf or len(right_child) >= minleaf:
-            imp_left = gini_index(left_child)
-            imp_right = gini_index(right_child)
+            imp_left = impurity(left_child)
+            imp_right = impurity(right_child)
             pi_left = len(left_child) / len(x)
             pi_right = len(right_child) / len(x)
-            imp_parent = gini_index(y)
+            imp_parent = impurity(y)
             red = imp_parent - ((pi_left * imp_left) + (pi_right * imp_right))
 
             if red > highest_red:
@@ -183,10 +181,6 @@ def bestsplit(x,y,minleaf):
                 best_split = split
     # return the best split option with the corresponding impurity reduction
     return best_split, highest_red
-
-def set_node_to_leaf(node, feature_value):
-    node.is_leaf = True
-    node.feature_value = feature_value
 
 def print_results(conf_matrix, acc, prec_rec, model_name):
     print(f"MODEL: {model_name} \n\n CONFUSION MATRIX: \n\n \
@@ -201,10 +195,10 @@ if __name__ == "__main__":
     num_of_obs, n_of_feat = pima_data.shape
     X = pima_data[:, :n_of_feat - 1]
     Y = pima_data[:, n_of_feat - 1]
-    tree = tree_grow(x=X, y=Y, nmin=20, minleaf=5, nfeat=8)
-    pred = tree_pred(x=X, tr=tree)
+    tree = tree_grow(X, Y, nmin=20, minleaf=5, nfeat=8)
+    pred = tree_pred(X, tr=tree)
 
-    print(evaluation_metrics(Y, pred))
+    print(confusion_matrix(Y, pred))
     sys.exit()
     n_of_obs, _  = y_train.shape
 
