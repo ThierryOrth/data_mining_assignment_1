@@ -99,7 +99,7 @@ def extend_node(node:Node, x:np.array, y:np.array, nmin:int, minleaf:int, nfeat:
 
     # Calculate the best split option for every feature in array x
     for f in range(n_of_feat):
-        split = bestsplit(x[:, f], y)  # best split for feature f in n_of_feat
+        split = bestsplit(x[:, f], y,minleaf)  # best split for feature f in n_of_feat
         splits.append(split)  # add best split to list splits
 
     # check for all the best splits of all features which one
@@ -130,20 +130,13 @@ def extend_node(node:Node, x:np.array, y:np.array, nmin:int, minleaf:int, nfeat:
     left_labels = y[feature_values <= threshold]
     right_labels = y[feature_values > threshold]
 
-    # MAKE A LEAF NODE IF THE NUMBER OF OBSERVATIONS
-    # FOR EITHER CHILD NODE IS TOO LOW
-    if len(left) < minleaf or len(right) < minleaf:
-        node.is_leaf = True
-        node.feature_value = majority_class
-        return
-
     node.left_child = Node()
     node.right_child = Node()
 
     extend_node(node.left_child, left, left_labels, nmin, minleaf, nfeat)
     extend_node(node.right_child, right, right_labels, nmin, minleaf, nfeat)
 
-def bestsplit(x,y):
+def bestsplit(x,y,minleaf):
     """Finds the best split from a range of candidate splits
             using the Gini index as impurity function."""
     highest_red = 0
@@ -155,17 +148,20 @@ def bestsplit(x,y):
     for split in candidate_splitpoints:
         left_child = y[x <= split]
         right_child = y[x > split]
+        majority_class = collections.Counter(y).most_common(1)[0][0]
+        # MAKE A LEAF NODE IF THE NUMBER OF OBSERVATIONS
+        # FOR EITHER CHILD NODE IS TOO LOW
+        if len(left_child) >= minleaf or len(right_child) >= minleaf:
+            imp_left = gini_index(left_child)
+            imp_right = gini_index(right_child)
+            pi_left = len(left_child) / len(x)
+            pi_right = len(right_child) / len(x)
+            imp_parent = gini_index(y)
+            red = imp_parent - ((pi_left * imp_left) + (pi_right * imp_right))
 
-        imp_left = gini_index(left_child)
-        imp_right = gini_index(right_child)
-        pi_left = len(left_child) / len(x)
-        pi_right = len(right_child) / len(x)
-        imp_parent = gini_index(y)
-        imp = imp_parent - ((pi_left * imp_left) + (pi_right * imp_right))
-
-        if imp > highest_red:
-            highest_red = imp
-            best_split = split
+            if red > highest_red:
+                highest_red = red
+                best_split = split
     # return the best split option with the corresponding impurity reduction
     return best_split, highest_red
 
@@ -198,9 +194,7 @@ def evaluation_metrics(y_true, y_pred):
     def recall(true_pos,false_neg):
         return true_pos/(true_pos+false_neg)
 
-    return confusion_matrix(true_pos,false_pos,true_neg,false_neg), accuracy(true_pos,false_pos,true_neg,false_neg), \
-                                     precision(true_pos,false_pos), recall(true_pos,false_neg)
-
+    return confusion_matrix(true_pos,false_pos,true_neg,false_neg)
 
 if __name__ == "__main__":
     #bestsplit(CREDIT_DATA[:,3],CREDIT_DATA[:,5])
