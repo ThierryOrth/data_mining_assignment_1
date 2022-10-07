@@ -12,6 +12,7 @@ bug_dataframe_test = pd.read_csv("eclipse-metrics-packages-3.0.csv", delimiter="
  
 column_indices=[2]+[i for i in range(4, 44)]
 
+
 # PREPROCESSING STEP: SET BUG VALUES TO CATEGORICALS
 x_train = bug_dataframe_train.iloc[:,column_indices].to_numpy()
 x_train[:,0] = np.where(0<x_train[:,0], 1.0, 0.0)
