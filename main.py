@@ -1,4 +1,5 @@
 import numpy as np
+from sklearn.metrics import accuracy_score, confusion_matrix, precision_recall_fscore_support
 import os
 import collections
 
@@ -11,12 +12,13 @@ class Node:
         for classification trees: the feature index in the data matrix,
         the split threshold, the left and right child nodes and whether
         it is a leaf or not."""
-    def __init__(self, feature_value=None,split_threshold=None, left_child=None,right_child=None,is_leaf=None):
+    def __init__(self, feature_value=None,split_threshold=None, left_child=None,right_child=None,is_leaf=None, majority=None):
         self.feature_value = feature_value # COLUMN IN THE MATRIX FOR NON-TERMINAL NODES, MAJORITY VOTE PREDICTION FOR TERMINAL NODES
         self.split_threshold = split_threshold
         self.left_child = left_child
         self.right_child = right_child
         self.is_leaf = is_leaf
+        self.majority = majority
 
 class Tree:
     """Constructs a tree by taking an initial node
@@ -52,38 +54,41 @@ def tree_pred(x, tr)->float:
         pred.append(current.feature_value)
     return pred
 
-def tree_grow_b(x, y, nmin, minleaf, nfeat, m):
-    n_of_obs, n_of_feat = x.shape
+
+def tree_grow_b(feature_obs: np.array, class_obs: np.array, nmin: int, minleaf: int, nfeat: int, m: int) -> list:
+    """Grows a bagged tree by sampling with replacement from the feature observations.
+       The hyperparameter nfeat can be used to train a random forest."""
+
+    n_of_obs, _ = feature_obs.shape
     trees = []
 
     for i in range(m):
-        indexes = np.random.choice(np.arange(0, n_of_obs, 1), n_of_obs, replace=True)
-        sampled_x = x[indexes]
-        sampled_y = y[indexes]
         root_node = Node()
-        extend_node(root_node, sampled_x, sampled_y, nmin, minleaf, nfeat)
+        indices = np.random.choice(np.arange(0, n_of_obs, 1), n_of_obs, replace=True)
+        feat_sample, class_sample = feature_obs[indices, :], class_obs[indices]
+
+        extend_node(root_node, feat_sample, class_sample, nmin, minleaf, nfeat)
         trees.append(Tree(root_node))
 
     return trees
 
 
-def tree_pred_b(x: np.array, trs: list):
-    preds = []
+def tree_pred_b(feature_obs: np.array, trs: list) -> float:
+    """Computes majority prediction given a feature array
+       and a collection of classification trees."""
+    row_index = len(trs)
+    col_index, _ = feature_obs.shape
+    predictions = np.zeros((row_index, col_index))
+    print("shape", predictions.shape)
 
-    for tr in trs:
-        pred = tree_pred(x, tr)
+    for index, tree in enumerate(trs):
+        predictions[index, :] = tree_pred(feature_obs, tree)
+        # predictions.append(tree_pred(feature_obs, tree))
 
-    return preds / len(preds)
-
-
-def gini_index(arr):
-    """Computes the Gini index as impurity function."""
-    left = arr[arr[:]==1].size #Amount of observations in the left child
-    right = arr[arr[:]==0].size #Amount of observations in the right child
-    total = arr.size #Amount of observations in the parent node (where the split is adjusted)
-    ##Calculate the Gini index
-    gini = (left/total)*(right/total)
-    return gini
+    majority_labels = [collections.Counter(predictions[:, i]).most_common(1)[0][0] for i in range(col_index)]
+    print("PREDICTIONS ALL", predictions[:20, :])
+    print("PREDICTIONS MAJ", majority_labels[:20])
+    return majority_labels
 
 def extend_node(node:Node, x:np.array, y:np.array, nmin:int, minleaf:int, nfeat:int):
     """Given a current node, checks whether it can be extended. If not, the node becomes
@@ -116,6 +121,7 @@ def extend_node(node:Node, x:np.array, y:np.array, nmin:int, minleaf:int, nfeat:
     node.split_threshold = threshold
 
     majority_class = collections.Counter(y).most_common(1)[0][0]
+    node.majority = majority_class
     # MAKE A LEAF NODE IF THERE EXISTS NO SPLIT, THE NUMBERS OF
     # OBSERVATIONS IS TOO LOW OR IMPURITY EQUALS ZERO
     if num_of_obs < nmin or gini_index(y) == 0:
@@ -166,42 +172,20 @@ def bestsplit(x,y,minleaf):
     return best_split, highest_red
 
 
-def evaluation_metrics(y_true, y_pred):
-    """Returns evaluation metrics given true
-        and predicted values."""
-    n = len(y_true)
-    true_pos = false_pos = true_neg = false_neg = 0
-
-    for i in range(n):
-        if y_true[i] == 1 and y_pred[i] == 1:
-            true_pos += 1
-        elif y_true[i] == 1 and y_pred[i] == 0:
-            false_pos += 1
-        elif y_true[i] == 0 and y_pred[i] == 1:
-            false_neg += 1
-        elif y_true[i] == 0 and y_pred[i] == 0:
-            true_neg += 1
-
-    def confusion_matrix(true_pos, false_pos, true_neg, false_neg):
-        return np.array([[true_neg, false_neg],[false_pos, true_pos]])
-
-    def accuracy(true_pos,false_pos,true_neg,false_neg):
-        return true_pos/(true_pos+false_pos+true_neg+false_neg)
-
-    def precision(true_pos,false_pos):
-        return true_pos/(true_pos+false_pos)
-
-    def recall(true_pos,false_neg):
-        return true_pos/(true_pos+false_neg)
-
-    return confusion_matrix(true_pos,false_pos,true_neg,false_neg)
+def gini_index(arr):
+    """Computes the Gini index as impurity function."""
+    left = arr[arr[:]==1].size #Amount of observations in the left child
+    right = arr[arr[:]==0].size #Amount of observations in the right child
+    total = arr.size #Amount of observations in the parent node (where the split is adjusted)
+    ##Calculate the Gini index
+    gini = (left/total)*(right/total)
+    return gini
 
 if __name__ == "__main__":
-    #bestsplit(CREDIT_DATA[:,3],CREDIT_DATA[:,5])
     num_of_obs, n_of_feat = pima_data.shape
     X = pima_data[:,:n_of_feat-1]
     Y = pima_data[:,n_of_feat-1]
     tree = tree_grow(x=X, y=Y, nmin = 20, minleaf = 5, nfeat = 8)
     pred = tree_pred(x=X,tr=tree)
 
-    print(evaluation_metrics(Y,pred))
+    print(confusion_matrix(Y,pred))
