@@ -182,10 +182,45 @@ def gini_index(arr):
     return gini
 
 if __name__ == "__main__":
-    num_of_obs, n_of_feat = pima_data.shape
-    X = pima_data[:,:n_of_feat-1]
-    Y = pima_data[:,n_of_feat-1]
-    tree = tree_grow(x=X, y=Y, nmin = 20, minleaf = 5, nfeat = 8)
-    pred = tree_pred(x=X,tr=tree)
+    #num_of_obs, n_of_feat = pima_data.shape
+    #X = pima_data[:,:n_of_feat-1]
+    #Y = pima_data[:,n_of_feat-1]
+    #tree = tree_grow(x=X, y=Y, nmin = 20, minleaf = 5, nfeat = 8)
+    #pred = tree_pred(x=X,tr=tree)
 
-    print(confusion_matrix(Y,pred))
+    #print(confusion_matrix(Y,pred))
+    #sys.exit()
+    #n_of_obs, _ = y_train.shape
+
+    start_time = time.time()
+
+    n, m = pima_data.shape
+    x_train = pima_data[:, :m - 1]
+    x_test = pima_data[:, m - 1]
+
+    tree = tree_grow(x_train, x_test, nmin=15, minleaf=5, nfeat=41)
+    tree_bagged = tree_grow_b(x_train, x_test, nmin=15, minleaf=5, nfeat=41, m=100)
+    random_forest = tree_grow_b(x_train, x_test, nmin=15, minleaf=5, nfeat=6, m=100)
+
+    print(f"FIRST TWO SPLITS REGULAR TREE:\
+                {tree.root.feature_value, tree.root.left_child.feature_value, tree.root.right_child.feature_value} \n")
+
+    y_pred_n = tree_pred(y_train, tree)
+    print_results(confusion_matrix(y_test, y_pred_n), accuracy_score(y_test, y_pred_n), \
+                  precision_recall_fscore_support(y_test, y_pred_n), model_name="REGULAR TREE")
+
+    print(time.time() - start_time)
+    start_time = time.time()
+
+    y_pred_b = tree_pred_b(y_train, tree_bagged)
+    print_results(confusion_matrix(y_test, y_pred_b), accuracy_score(y_test, y_pred_b), \
+                  precision_recall_fscore_support(y_test, y_pred_b), model_name="BAGGED TREE")
+
+    print(time.time() - start_time)
+    start_time = time.time()
+
+    y_pred_f = tree_pred_b(y_train, random_forest)
+    print_results(confusion_matrix(y_test, y_pred_f), accuracy_score(y_test, y_pred_f), \
+                  precision_recall_fscore_support(y_test, y_pred_f), model_name="RANDOM FOREST")
+
+    print(time.time() - start_time)
