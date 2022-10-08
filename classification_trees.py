@@ -139,31 +139,29 @@ def extend_node(node:Node, x:np.array, y:np.array, nmin:int, minleaf:int, nfeat:
     feat_to_split = dict()
     feat_to_imp = dict()
     num_of_obs, n_of_feat = x.shape
+    # get feature indices relative to nfeat parameter
 
-    if nfeat<n_of_feat:
-        indices = np.random.choice(np.arange(0,nfeat,1), nfeat, replace=False)
-        x = x[:, indices]
-        n_of_feat = nfeat
+    indices = np.random.choice(np.arange(0,nfeat,1), nfeat, replace=False) if nfeat<n_of_feat else np.arange(0, n_of_feat, 1)
+    # set majority label for nodes
+    node.majority_label = collections.Counter(y).most_common(1)[0][0]
 
-    # Calculate the best split option for every feature in array x
-
-    majority_label = collections.Counter(y).most_common(1)[0][0]
-    node.majority_label = majority_label
-
-    for index in range(n_of_feat):
+    # construct mapping from feature values to split and impurity values
+    for index in indices:
         split, imp = bestsplit(x[:,index],y,minleaf)
         
         if split:
             feat_to_split[index]=split
             feat_to_imp[index]=imp
 
+    # make leaf node if there are no splits, the number of observations is too low
+    # or impurity is zero
     if not feat_to_split or num_of_obs < nmin or impurity(y) == 0:
         node.is_leaf = True
         return
 
+    # get feature value of best split, get best split and 
     feature_index = min(feat_to_imp, key=feat_to_imp.get)
     threshold = feat_to_split[feature_index]
-    
     feature_values = x[:, feature_index]
 
     node.feature = feature_index
@@ -179,6 +177,10 @@ def extend_node(node:Node, x:np.array, y:np.array, nmin:int, minleaf:int, nfeat:
     # assign each row to either the left or right child based on its value
     left = x[x[:, feature_index] <= threshold]
     right = x[x[:, feature_index] > threshold]
+
+    # print(f"x:{x}")
+    # print(f"left:{left}")
+    # print(f"right:{right}")
 
     left_labels = y[feature_values <= threshold]
     right_labels = y[feature_values > threshold]
@@ -256,7 +258,7 @@ def load_data(dataset):
         y_test = bug_dataframe_test.iloc[:,3].to_numpy()
         y_test = np.where(0.0<y_test, 1.0, 0.0)
 
-        return x_train, x_test, y_train, y_test
+        return bug_dataframe_train.columns, x_train, x_test, y_train, y_test
 
 def print_results(y_true,y_pred, name, runtime, verbose=False):
     scores = precision_recall_fscore_support(y_true,y_pred)
@@ -273,22 +275,41 @@ def print_results(y_true,y_pred, name, runtime, verbose=False):
         with open(f"results_{name}.txt", "w") as file:
             file.write(string)
 
-def visualize_tree(node_names, edge_list, name_to_threshold):
+def visualize_tree(nodes, edges, columns):
     #TODO
-    dot = graphviz.Digraph(comment="first two splits classification tree")
+    digraph = graphviz.Digraph(comment="first two splits classification tree")
+
+    for name, node in nodes.items():
+        majority_label = node.majority_label
     
-    for node_name in node_names:
-        dot.node(node_name, str(name_to_threshold[node_name]))
-    dot.edges(edge_list)
+        if not node.is_leaf:
+            digraph.node(name, f"feature: {columns[node.feature]} \n majority class: {majority_label}")
+        else:
+            digraph.node(name, f"leaf node \n majority class: {majority_label}")
+
+    for parent, children in edges.items():
+        left_child, right_child = children
+        threshold = nodes[parent].threshold
+
+        digraph.edge(parent, left_child, label=f"<={threshold}", len="1.00")
+        digraph.edge(parent, right_child, label=f">{threshold}", len="1.00")
+
+    digraph.render(directory='doctest-output', view=True)  
 
 if __name__ == "__main__":
     np.random.seed(42)
-    x_train, x_test, y_train, y_test = load_data(dataset="bug")
+    column_names, x_train, x_test, y_train, y_test = load_data(dataset="bug")
 
     start_time = time.time()
     tree = tree_grow(x_train, x_test, nmin=15, minleaf=5, nfeat=41)
     y_pred_n = tree_pred(y_train, tree)
     print_results(y_test, y_pred_n, name="regular_tree", runtime=time.time() - start_time,verbose=True)
+
+    nodes = dict({"A":tree.root, "B":tree.root.left_child, "C":tree.root.right_child, \
+            "D":tree.root.right_child.left_child,"E":tree.root.right_child.right_child})
+    edges = dict({"A":("B","C"),"C":("D","E")})
+    
+    visualize_tree(nodes, edges, column_names)
 
     # A picture of the first two splits of the single tree (the split in the root
     # node, and the split in its left or right child). Consider the classification
@@ -297,6 +318,12 @@ if __name__ == "__main__":
     # makes sense, given the meaning of the attributes.
 
     #visualize_tree(node_names= ,edge_list=, name_to_threshold=,)
+
+    # REQUIREMENTS
+
+    # PARENT NODE, CHILD NODES, CHILD NODES OF ONE CHILD NODE
+
+    # PROPERTIES: MAJORITY CLASS, FEATURE THRESHOLD AND SPLIT
 
     start_time = time.time()
     tree_bagged = tree_grow_b(x_train, x_test, nmin=15, minleaf=5, nfeat=41, m=100)

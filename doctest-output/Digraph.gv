@@ -1,0 +1,17 @@
+// first two splits classification tree
+digraph {
+	A [label="feature: NOT_avg 
+ majority class: 1.0"]
+	B [label="feature: NSM_avg 
+ majority class: 1.0"]
+	C [label="feature: pre 
+ majority class: 1.0"]
+	D [label="feature: post 
+ majority class: 1.0"]
+	E [label="leaf node 
+ majority class: 1.0"]
+	A -> B [label="<=1.677941176470588" len=1.00]
+	A -> C [label=">1.677941176470588" len=1.00]
+	C -> D [label="<=12.5" len=1.00]
+	C -> E [label=">12.5" len=1.00]
+}
