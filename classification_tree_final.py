@@ -2,6 +2,7 @@ import collections, os, time, graphviz
 import numpy as np
 import pandas as pd
 from sklearn.metrics import accuracy_score, confusion_matrix, precision_recall_fscore_support
+from statsmodels.stats.contingency_tables import mcnemar
 
 class Node:
     """Constructs a node with the following properties: left child node, right child node, 
@@ -276,6 +277,22 @@ def visualize_tree(nodes, edges, node_names):
 
     digraph.render(directory='doctest-output', view=True)  
 
+def stats_test(y_test, y_pred_A, y_pred_B):
+
+    # identify in/correct predictions of algorithm A vs. B 
+    n00 = [i for i in range(len(y_test)) if (y_pred_A[i] != y_test[i]) & (y_pred_B[i] != y_test[i])]
+    n01 = [i for i in range(len(y_test)) if (y_pred_A[i] != y_test[i]) & (y_pred_B[i] == y_test[i])]
+    n10 = [i for i in range(len(y_test)) if (y_pred_A[i] == y_test[i]) & (y_pred_B[i] != y_test[i])]
+    n11 = [i for i in range(len(y_test)) if (y_pred_A[i] == y_test[i]) & (y_pred_B[i] == y_test[i])]
+
+    # confusion matrix of number of in/correct predicitons
+    table = [[len(n00), len(n01)],
+             [len(n10), len(n11)]]
+
+    # test table for significant differences from expected counts under Chi2 distribution
+    return mcnemar(table, exact=False, correction=False)
+
+
 if __name__ == "__main__":
     np.random.seed(42)
     
@@ -312,3 +329,7 @@ if __name__ == "__main__":
     random_forest = tree_grow_b(x_train, y_train, nmin=15, minleaf=5, nfeat=6, m=100)
     y_pred_f = tree_pred_b(x_test, random_forest)
     print_results(y_test, y_pred_f, name="random_forest", runtime=time.time() - start_time, save_results=True)
+
+    ### compare predictive performance statistically ###
+    print(f"Regular vs. bagging \n {stats_test(y_test=y_test, y_pred_A=y_pred_n, y_pred_B=y_pred_b)}")
+    print(f"Bagging vs. random forest \n {stats_test(y_test=y_test, y_pred_A=y_pred_b, y_pred_B=y_pred_f)}")
