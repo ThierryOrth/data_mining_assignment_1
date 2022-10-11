@@ -1,3 +1,4 @@
+"""Christine Hedde-von Westernhagen (5987932), Kim van Genderen (6497039), Thierry Orth (6176178)"""
 import collections, os, time, graphviz
 import numpy as np
 import pandas as pd
