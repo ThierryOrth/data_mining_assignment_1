@@ -37,7 +37,7 @@ def tree_grow(feature_obs:np.array, class_obs:np.array, nmin:int, minleaf:int, n
 def tree_pred(feature_obs: np.array, tr: Tree) -> float:
     """Predicts the class label for a feature vector by traversing the tree. For each feature vector 
        and at each node, the tree is traversed by comparing the split threshold with the observed 
-       feature value. Once a leaf node is reached, the majority label is predicted."""
+       feature value. Once a leaf node is reached, the majority label is predicted. Returns a vector of the predicted class labels."""
     pred=[]
 
     ### loop until we find a leaf node ###
@@ -61,7 +61,7 @@ def tree_pred(feature_obs: np.array, tr: Tree) -> float:
 
 def tree_grow_b(feature_obs:np.array, class_obs:np.array, nmin:int, minleaf:int, nfeat:int, m:int) -> list:
     """Grows a bagged tree by sampling with replacement from the feature observations. If the hyperparameter
-       nfeat is below feature vector length, the function trains a random forest."""
+       nfeat is below feature vector length, the function trains a random forest. Returns list of trees."""
 
     n_of_obs, _ = feature_obs.shape
     trees = []
@@ -162,7 +162,7 @@ def extend_node(node:Node, x:np.array, y:np.array, nmin:int, minleaf:int, nfeat:
 
 
 def impurity(class_obs: np.array) -> float:
-    """Computes the Gini index of an array of
+    """Returns the Gini index of an array of
        class observations."""
     total = class_obs.size
     pos_class = class_obs[class_obs == 1].size
@@ -171,8 +171,8 @@ def impurity(class_obs: np.array) -> float:
 
 
 def bestsplit(x,y,minleaf):
-    """Finds the best split from a range of candidate splits
-            using the Gini index as impurity function."""
+    """Returns the best split and associated impurity reduction from a range of candidate splits
+            using the Gini index as impurity function and using the minleaf constraint."""
     highest_red = 0
     x_sorted = np.sort(np.unique(x))
     candidate_splitpoints = (x_sorted[0:(x_sorted.size - 1)] + x_sorted[1:x_sorted.size]) / 2
@@ -201,6 +201,7 @@ def bestsplit(x,y,minleaf):
     return best_split, highest_red
 
 def load_data(dataset):
+    """Loads dataset and partitions dataset into training and test data."""
     dir = os.getcwd()
 
     if dataset=="credit":
@@ -248,6 +249,7 @@ def load_data(dataset):
         return column_names, x_train, y_train, x_test, y_test
 
 def print_results(y_true,y_pred, name, runtime=None, save_results=False):
+    """Prints the following classification metrics: confusion matrix, precision, recall, accuracy and runtime in seconds."""
     scores = precision_recall_fscore_support(y_true,y_pred)
     string = f"NAME OF MODEL: {name} \n CONFUSION MATRIX: \n {confusion_matrix(y_true,y_pred)} \n PRECISION: {scores[0]} \n RECALL: {scores[1]} \n ACCURACY SCORE: {accuracy_score(y_true,y_pred)} \n RUNTIME IN SECONDS: {runtime}"
     
