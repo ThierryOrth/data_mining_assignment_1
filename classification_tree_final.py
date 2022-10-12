@@ -281,7 +281,7 @@ def visualize_tree(nodes, edges, node_names):
     digraph.render(directory='doctest-output', view=True)  
 
 def stats_test(y_test, y_pred_A, y_pred_B):
-
+    """Assembles confusion matrix needed for McNemar's test, conducts test, and returns results."""
     # identify in/correct predictions of algorithm A vs. B 
     n00 = [i for i in range(len(y_test)) if (y_pred_A[i] != y_test[i]) & (y_pred_B[i] != y_test[i])]
     n01 = [i for i in range(len(y_test)) if (y_pred_A[i] != y_test[i]) & (y_pred_B[i] == y_test[i])]
@@ -334,5 +334,6 @@ if __name__ == "__main__":
     print_results(y_test, y_pred_f, name="random_forest", runtime=time.time() - start_time, save_results=True)
 
     ### compare predictive performance statistically ###
-    print(f"Regular vs. bagging \n {stats_test(y_test=y_test, y_pred_A=y_pred_n, y_pred_B=y_pred_b)}")
+    print(f"Single vs. bagging \n {stats_test(y_test=y_test, y_pred_A=y_pred_n, y_pred_B=y_pred_b)}")
     print(f"Bagging vs. random forest \n {stats_test(y_test=y_test, y_pred_A=y_pred_b, y_pred_B=y_pred_f)}")
+    print(f"Random forest vs. single \n {stats_test(y_test=y_test, y_pred_A=y_pred_f, y_pred_B=y_pred_n)}")
