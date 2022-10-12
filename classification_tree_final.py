@@ -1,5 +1,6 @@
 """Christine Hedde-von Westernhagen (5987932), Kim van Genderen (6497039), Thierry Orth (6176178)"""
 import collections, os, time, graphviz
+from tkinter import N
 import numpy as np
 import pandas as pd
 from sklearn.metrics import accuracy_score, confusion_matrix, precision_recall_fscore_support
@@ -133,7 +134,7 @@ def extend_node(node:Node, x:np.array, y:np.array, nmin:int, minleaf:int, nfeat:
         return
 
     ### get feature index and split threshold of feature with lowest impurity ### 
-    feature_index = min(feat_to_imp, key=feat_to_imp.get)
+    feature_index = max(feat_to_imp, key=feat_to_imp.get)
     threshold = feat_to_split[feature_index]
 
      ### set feature value and threshold at node ###
@@ -321,7 +322,7 @@ if __name__ == "__main__":
     
     visualize_tree(nodes, edges, column_names)
 
-    ### train and evaluate bagged tree ###
+    ## train and evaluate bagged tree ###
     start_time = time.time()
     bagged_tree = tree_grow_b(x_train, y_train, nmin=15, minleaf=5, nfeat=41, m=100)
     y_pred_b = tree_pred_b(x_test, bagged_tree)
