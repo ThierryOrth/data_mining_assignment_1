@@ -133,7 +133,7 @@ def extend_node(node:Node, x:np.array, y:np.array, nmin:int, minleaf:int, nfeat:
         node.is_leaf = True
         return
 
-    ### get feature index and split threshold of feature with lowest impurity ### 
+    ### get feature index and split threshold of feature with highest impurity reduction ### 
     feature_index = max(feat_to_imp, key=feat_to_imp.get)
     threshold = feat_to_split[feature_index]
 
